@@ -58,13 +58,13 @@ class PandasPolarsComparator:
         """
         results = {}
 
-        # Measure csv loading time
+        # Measure processing time for loading csv
         pd_df, pd_read_time = self._measure_time(
             lambda: pd.read_csv(self.data_path), "pandas")
         pl_df, pl_read_time = self._measure_time(
             lambda: pl.read_csv(self.data_path), "polars")
 
-        # Measure csv writing time
+        # Measure processing time for writing csv
         dir_path = os.path.dirname(self.data_path)
         pd_output_path = dir_path + "/pandas_output.csv"
         pl_output_path = dir_path + "/polars_output.csv"
@@ -74,17 +74,35 @@ class PandasPolarsComparator:
         _, pl_write_time = self._measure_time(
             lambda: pl_df.write_csv(pl_output_path), "polars")
 
-        # Measure describe processing time
+        # Measure processing time for describing basic statistics
         _, pd_describe_time = self._measure_time(
             lambda: pd_df.describe(), "pandas")
         _, pl_describe_time = self._measure_time(
             lambda: pl_df.describe(), "polars")
         
-        # Measure filter processing time
+        # Measure processing time for filtering
         _, pd_filter_time = self._measure_time(
-            lambda: pd_df[pd_df['numeric_val'] > 20.0], "pandas")
+            lambda: pd_df[pd_df["numeric_val"] > 20.0], "pandas")
         _, pl_filter_time = self._measure_time(
-            lambda: pl_df.filter(pl.col('numeric_val') > 20.0), "polars")
+            lambda: pl_df.filter(pl.col("numeric_val") > 20.0), "polars")
+
+        # Measure processing time for removing missing values
+        pd_df_removed, pd_remove_time = self._measure_time(
+            lambda: pd_df.dropna(), "pandas")
+        pl_df_removed, pl_remove_time = self._measure_time(
+            lambda: pl_df.drop_nulls(), "polars")
+
+        # Measure processing time for conversion
+        _, pd_conversion_time = self._measure_time(
+            lambda: pd_df_removed["numeric_val"].astype("int64"), "pandas")
+        _, pl_conversion_time = self._measure_time(
+            lambda: pl_df_removed.select(pl.col("numeric_val").cast(pl.Int64)), "polars")
+
+        # Measure processing time for One-Hot Encoding
+        _, pd_encoding_time = self._measure_time(
+            lambda: pd.get_dummies(pd_df["category_val"]), "pandas")
+        _, pl_encoding_time = self._measure_time(
+            lambda: pl_df.select(pl.col("category_val")).to_dummies(), "polars")
 
         # Add times into results dictionary
         results.update({
@@ -92,5 +110,8 @@ class PandasPolarsComparator:
             "write csv": pd_write_time | pl_write_time,
             "describe": pd_describe_time | pl_describe_time,
             "filter": pd_filter_time | pl_filter_time,
+            "remove null": pd_remove_time | pl_read_time,
+            "conversion": pd_conversion_time | pl_conversion_time,
+            "One-Hot Encoding": pd_encoding_time | pl_encoding_time,
         })
         return results
