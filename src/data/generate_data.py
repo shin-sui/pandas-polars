@@ -45,13 +45,13 @@ def generate_dataset(data_path: str, seed: int = 42, num_rows: int = 1000000) ->
     numeric_data = np.random.normal(0, 100, num_rows)
 
     # Generate categorical data: random selection from specified categories
-    category_data = np.random.choice(["a", "b", "c", "d", "e"], num_rows)
+    category_data = np.random.choice(["a", "b"], num_rows)
 
     # Create a DataFrame with the generated data
     df = pd.DataFrame({
-        'string_val': string_data,
-        'numeric_val': numeric_data,
-        'category_val': category_data
+        "string_val": string_data,
+        "numeric_val": numeric_data,
+        "category_val": category_data,
     })
 
     # Define the proportion of missing values
