@@ -1,3 +1,4 @@
+import os
 import time
 from typing import Callable
 import statistics
@@ -62,6 +63,22 @@ class PandasPolarsComparator:
             lambda: pd.read_csv(self.data_path), "pandas")
         pl_df, pl_read_time = self._measure_time(
             lambda: pl.read_csv(self.data_path), "polars")
+
+        # Measure csv writing time
+        dir_path = os.path.dirname(self.data_path)
+        pd_output_path = dir_path + "/pandas_output.csv"
+        pl_output_path = dir_path + "/polars_output.csv"
+
+        _, pd_write_time = self._measure_time(
+            lambda: pd_df.to_csv(pd_output_path, index=False), "pandas")
+        _, pl_write_time = self._measure_time(
+            lambda: pl_df.write_csv(pl_output_path), "polars")
+
+        # Measure describe processing time
+        _, pd_describe_time = self._measure_time(
+            lambda: pd_df.describe(), "pandas")
+        _, pl_describe_time = self._measure_time(
+            lambda: pl_df.describe(), "polars")
         
         # Measure filter processing time
         _, pd_filter_time = self._measure_time(
@@ -71,7 +88,9 @@ class PandasPolarsComparator:
 
         # Add times into results dictionary
         results.update({
-            "read": pd_read_time | pl_read_time,
+            "read csv": pd_read_time | pl_read_time,
+            "write csv": pd_write_time | pl_write_time,
+            "describe": pd_describe_time | pl_describe_time,
             "filter": pd_filter_time | pl_filter_time,
         })
         return results
