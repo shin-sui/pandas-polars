@@ -2,6 +2,7 @@ import argparse
 from pathlib import Path
 
 import rootutils
+from rich.console import Console
 
 from data.generate_data import generate_dataset
 from component.compare import PandasPolarsComparator
@@ -30,13 +31,19 @@ def main():
     root_path = rootutils.find_root(search_from=__file__, indicator=[".project-root"])
     data_path = Path(root_path) / "data" / dataset_name
 
+    # Initialize the console
+    console = Console()
+
     # Retrieve and save the dataset if it does not exist
     if not data_path.exists():
-        generate_dataset(data_path)
+        with console.status("[green]Generating dataset..."):
+            generate_dataset(data_path)
 
     # Compare processing speeds between pandas and polars
-    comparator = PandasPolarsComparator(data_path)
-    results = comparator.compare()
+    with console.status("[green]Measuring processing speeds of pandas and polars..."):
+        comparator = PandasPolarsComparator(data_path, console)
+        results = comparator.compare()
+        console.print()
 
     # Display the comparison results in a rich table format
     rich_output = PrintResult()
