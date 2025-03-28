@@ -60,6 +60,7 @@ class PandasPolarsComparator:
         """
         results = {}
 
+
         # Measure processing time for loading csv
         pd_df, pd_load_time = self._measure_time(
             lambda: pd.read_csv(self.data_path), "pandas")
@@ -120,6 +121,15 @@ class PandasPolarsComparator:
 
         self.console.log("One-Hot Encoding: Done!")
 
+        # Measure processing time for sort
+        _, pd_sort_time = self._measure_time(
+            lambda: pd_df.sort_values(by="numeric_val", ascending=False), "pandas")
+        _, pl_sort_time = self._measure_time(
+            lambda: pl_df.sort("numeric_val", descending=True), "polars")
+
+        self.console.log("Sort: Done...")
+        
+
         # Add times into results dictionary
         results.update({
             "load csv": pd_load_time | pl_load_time,
@@ -129,5 +139,6 @@ class PandasPolarsComparator:
             "remove null": pd_remove_time | pl_remove_time,
             "conversion": pd_conversion_time | pl_conversion_time,
             "One-Hot Encoding": pd_encoding_time | pl_encoding_time,
+            "Sort": pd_sort_time | pl_sort_time,
         })
         return results
