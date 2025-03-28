@@ -1,0 +1,18 @@
+version: '3'
+services:
+  pandas-polars:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        USERNAME: ${USERNAME}
+        UID: ${UID}
+        GID: ${GID}
+    volumes:
+      - ../:/home/${USERNAME}
+    image: pandas-polars
+    environment:
+      - USERNAME=${USERNAME}
+    stdin_open: true
+    tty: true
+    user: "${UID}:${GID}"
