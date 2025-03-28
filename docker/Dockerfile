@@ -4,6 +4,7 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 # Set environment variables for bytecode compilation and link mode
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
+ENV UV_PROJECT_ENVIRONMENT=/usr/local
 
 # Define build arguments
 ARG USERNAME

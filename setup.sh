@@ -2,7 +2,7 @@
 set -eu
 
 ENV_FILE_PATH=./docker/.env
-USERNAME_VALUE=${USERNAME:-user0}
+USERNAME_VALUE=${USERNAME:-$(whoami)}
 USER_ID=1000
 GROUP_ID=1000
 
