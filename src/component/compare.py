@@ -120,6 +120,14 @@ class PandasPolarsComparator:
 
         self.console.log("One-Hot Encoding: Done!")
 
+        # Measure processing time for Inputation
+        _, pd_imputation_time = self._measure_time(
+            lambda: pd_df["numeric_val"].fillna(0), "pandas")
+        _, pl_imputaiton_time = self._measure_time(
+            lambda: pl_df.select(pl.col("numeric_val")).fill_null(0), "polars")
+
+        self.console.log("Missing value imputation: Done!")
+
         # Add times into results dictionary
         results.update({
             "load csv": pd_load_time | pl_load_time,
@@ -129,5 +137,6 @@ class PandasPolarsComparator:
             "remove null": pd_remove_time | pl_remove_time,
             "conversion": pd_conversion_time | pl_conversion_time,
             "One-Hot Encoding": pd_encoding_time | pl_encoding_time,
+            "Missing value imputation": pd_imputation_time | pl_imputaiton_time,
         })
         return results
