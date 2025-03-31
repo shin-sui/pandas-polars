@@ -1,6 +1,6 @@
 import os
 import time
-from typing import Callable
+from typing import Callable, Optional
 import statistics
 
 import pandas as pd
@@ -49,7 +49,7 @@ class PandasPolarsComparator:
         result = {library_type: average_time}
         return df, result
 
-    def compare(self) -> dict[str, dict[str, float]]:
+    def compare(self, task: Optional[str] = None) -> dict[str, dict[str, float]]:
         """
         Compares the performance of pandas and polars.
 
@@ -59,86 +59,106 @@ class PandasPolarsComparator:
             corresponding average execution times as values.
         """
         results = {}
+        pd_df = pd.read_csv(self.data_path)
+        pl_df = pl.read_csv(self.data_path)
+        pd_df_removed = pd_df.dropna()
+        pl_df_removed = pl_df.drop_nulls()
 
-
-        # Measure processing time for loading csv
-        pd_df, pd_load_time = self._measure_time(
-            lambda: pd.read_csv(self.data_path), "pandas")
-        pl_df, pl_load_time = self._measure_time(
-            lambda: pl.read_csv(self.data_path), "polars")
+        if task == "load":
+            # Measure processing time for loading csv
+            pd_df, pd_load_time = self._measure_time(
+                lambda: pd.read_csv(self.data_path), "pandas")
+            pl_df, pl_load_time = self._measure_time(
+                lambda: pl.read_csv(self.data_path), "polars")
+            
+            results["load csv"] = pd_load_time|pl_load_time
+            self.console.log("Load csv: Done!")
         
-        self.console.log("Load csv: Done!")
+        else:
+            if task == "write":
+                # Measure processing time for writing csv
+                dir_path = os.path.dirname(self.data_path)
+                pd_output_path = dir_path + "/pandas_output.csv"
+                pl_output_path = dir_path + "/polars_output.csv"
 
-        # Measure processing time for writing csv
-        dir_path = os.path.dirname(self.data_path)
-        pd_output_path = dir_path + "/pandas_output.csv"
-        pl_output_path = dir_path + "/polars_output.csv"
+                _, pd_write_time = self._measure_time(
+                    lambda: pd_df.to_csv(pd_output_path, index=False), "pandas")
+                _, pl_write_time = self._measure_time(
+                    lambda: pl_df.write_csv(pl_output_path), "polars")
+                
+                self.console.log("Write csv: Done!")
+                results["write"] = pd_write_time|pl_write_time
 
-        _, pd_write_time = self._measure_time(
-            lambda: pd_df.to_csv(pd_output_path, index=False), "pandas")
-        _, pl_write_time = self._measure_time(
-            lambda: pl_df.write_csv(pl_output_path), "polars")
+            elif task == "describe":
+                # Measure processing time for describing basic statistics
+                _, pd_describe_time = self._measure_time(
+                    lambda: pd_df.describe(), "pandas")
+                _, pl_describe_time = self._measure_time(
+                    lambda: pl_df.describe(), "polars")
+
+                self.console.log("Describe basic statistics: Done!")
+                results["describe"] = pd_describe_time|pl_describe_time
         
-        self.console.log("Write csv: Done!")
+            elif task == "filter":
+                # Measure processing time for filtering
+                _, pd_filter_time = self._measure_time(
+                    lambda: pd_df[pd_df["numeric_val"] > 20.0], "pandas")
+                _, pl_filter_time = self._measure_time(
+                    lambda: pl_df.filter(pl.col("numeric_val") > 20.0), "polars")
+                
+                self.console.log("Filter: Done!")
+                results["filter"] = pd_filter_time|pl_filter_time
 
-        # Measure processing time for describing basic statistics
-        _, pd_describe_time = self._measure_time(
-            lambda: pd_df.describe(), "pandas")
-        _, pl_describe_time = self._measure_time(
-            lambda: pl_df.describe(), "polars")
+            elif task == "remove_null":
+                # Measure processing time for removing missing values
+                pd_df_removed, pd_remove_time = self._measure_time(
+                    lambda: pd_df.dropna(), "pandas")
+                pl_df_removed, pl_remove_time = self._measure_time(
+                    lambda: pl_df.drop_nulls(), "polars")
 
-        self.console.log("Describe basic statistics: Done!")
-        
-        # Measure processing time for filtering
-        _, pd_filter_time = self._measure_time(
-            lambda: pd_df[pd_df["numeric_val"] > 20.0], "pandas")
-        _, pl_filter_time = self._measure_time(
-            lambda: pl_df.filter(pl.col("numeric_val") > 20.0), "polars")
-        
-        self.console.log("Filter: Done!")
+                self.console.log("Remove null Done!")
+                results["remove null"] = pd_remove_time|pl_remove_time
 
-        # Measure processing time for removing missing values
-        pd_df_removed, pd_remove_time = self._measure_time(
-            lambda: pd_df.dropna(), "pandas")
-        pl_df_removed, pl_remove_time = self._measure_time(
-            lambda: pl_df.drop_nulls(), "polars")
+            # conversion処理の際に、remove_nullで作成したデータフレームを使用しているの
+            elif task == "conversion":
+                # Measure processing time for conversion
+                _, pd_conversion_time = self._measure_time(
+                    lambda: pd_df_removed["numeric_val"].astype("int64"), "pandas")
+                _, pl_conversion_time = self._measure_time(
+                    lambda: pl_df_removed.select(pl.col("numeric_val").cast(pl.Int64)), "polars")
 
-        self.console.log("Remove null Done!")
+                self.console.log("Conversion: Done!")
+                results["conversion"] = pd_conversion_time|pl_conversion_time
 
-        # Measure processing time for conversion
-        _, pd_conversion_time = self._measure_time(
-            lambda: pd_df_removed["numeric_val"].astype("int64"), "pandas")
-        _, pl_conversion_time = self._measure_time(
-            lambda: pl_df_removed.select(pl.col("numeric_val").cast(pl.Int64)), "polars")
+            elif task == "one_hot_encoding":
+                # Measure processing time for One-Hot Encoding
+                _, pd_encoding_time = self._measure_time(
+                    lambda: pd.get_dummies(pd_df["category_val"]), "pandas")
+                _, pl_encoding_time = self._measure_time(
+                    lambda: pl_df.select(pl.col("category_val")).to_dummies(), "polars")
 
-        self.console.log("Conversion: Done!")
+                self.console.log("One-Hot Encoding: Done!")
+                results["One-Hot Encoding"] = pd_encoding_time|pl_encoding_time
 
-        # Measure processing time for One-Hot Encoding
-        _, pd_encoding_time = self._measure_time(
-            lambda: pd.get_dummies(pd_df["category_val"]), "pandas")
-        _, pl_encoding_time = self._measure_time(
-            lambda: pl_df.select(pl.col("category_val")).to_dummies(), "polars")
+            elif task == "sort":
+                # Measure processing time for sort
+                _, pd_sort_time = self._measure_time(
+                    lambda: pd_df.sort_values(by="numeric_val", ascending=False), "pandas")
+                _, pl_sort_time = self._measure_time(
+                    lambda: pl_df.sort("numeric_val", descending=True), "polars")
 
-        self.console.log("One-Hot Encoding: Done!")
+                self.console.log("Sort: Done...")
+                results["sort"] = pd_sort_time|pl_sort_time
 
-        # Measure processing time for sort
-        _, pd_sort_time = self._measure_time(
-            lambda: pd_df.sort_values(by="numeric_val", ascending=False), "pandas")
-        _, pl_sort_time = self._measure_time(
-            lambda: pl_df.sort("numeric_val", descending=True), "polars")
+            else:
+                # If no spesicfic task is selected
+                # Measure processing time for loading csv
+                pd_df, pd_load_time = self._measure_time(
+                    lambda: pd.read_csv(self.data_path), "pandas")
+                pl_df, pl_load_time = self._measure_time(
+                    lambda: pl.read_csv(self.data_path), "polars")
+                    
+                results["load csv"] = pd_load_time|pl_load_time
+                self.console.log("Load csv: Done!")
 
-        self.console.log("Sort: Done...")
-        
-
-        # Add times into results dictionary
-        results.update({
-            "load csv": pd_load_time | pl_load_time,
-            "write csv": pd_write_time | pl_write_time,
-            "describe": pd_describe_time | pl_describe_time,
-            "filter": pd_filter_time | pl_filter_time,
-            "remove null": pd_remove_time | pl_remove_time,
-            "conversion": pd_conversion_time | pl_conversion_time,
-            "One-Hot Encoding": pd_encoding_time | pl_encoding_time,
-            "Sort": pd_sort_time | pl_sort_time,
-        })
         return results

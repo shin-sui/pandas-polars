@@ -12,15 +12,23 @@ def parse_args():
     """Parse command-line arguments to get the dataset filename.
 
     Returns:
-        argparse.Namespace: Parsed command-line arguments containing the dataset filename.
+        argparse.Namespace: Parsed command-line arguments containing the dataset filename and task type.
     """
     parser = argparse.ArgumentParser(description="Compare pandas and polars processing speeds.")
     parser.add_argument(
         "-d", "--dataset", type=str, default="sample_dataset.csv",
         help="Filename of the dataset to be used. Defaults to 'sample_dataset.csv'."
     )
+
+    parser.add_argument(
+        "-t", "--tasktype", type=str, choices=["load", "write", "describe", "filter", "remove_null", "conversion", "one_hot_encoding", "sort"],
+        default="load", 
+        help="Specify the task to perform. Choices are: 'load', 'write', 'describe', 'filter', 'remove_null', 'conversion', 'one_hot_encoding', 'sort'. Default is 'load'."
+    )
+    
     return parser.parse_args()
 
+# 実行コード
 def main():
     """Entry point to orchestrate data retrieval, processing speed comparison, and result display.
     """
@@ -39,10 +47,10 @@ def main():
         with console.status("[green]Generating dataset..."):
             generate_dataset(data_path)
 
-    # Compare processing speeds between pandas and polars
+    # Compare processing speeds between pandas and polars タイプを指定
     with console.status("[green]Measuring processing speeds of pandas and polars..."):
         comparator = PandasPolarsComparator(data_path, console)
-        results = comparator.compare()
+        results = comparator.compare(task=args.tasktype) 
         console.print()
 
     # Display the comparison results in a rich table format
@@ -51,3 +59,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
