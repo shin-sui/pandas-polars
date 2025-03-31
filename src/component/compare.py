@@ -130,6 +130,7 @@ class PandasPolarsComparator:
                 self.console.log("Conversion: Done!")
                 results["conversion"] = pd_conversion_time|pl_conversion_time
 
+
             elif task == "one_hot_encoding":
                 # Measure processing time for One-Hot Encoding
                 _, pd_encoding_time = self._measure_time(
